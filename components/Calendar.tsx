@@ -119,6 +119,13 @@ const Calendar: React.FC = () => {
     return days
   }
 
+  // Get events for the selected date
+  const getSelectedDateEvents = () => {
+    return selectedDate 
+      ? events.filter(event => new Date(event.date).toDateString() === selectedDate.toDateString())
+      : []
+  }
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardContent>
@@ -147,6 +154,7 @@ const Calendar: React.FC = () => {
               setEditingEvent(null)
             }}
             event={editingEvent}
+            existingEvents={getSelectedDateEvents()}
           />
         )}
         {showEventList && selectedDate && (
@@ -164,4 +172,3 @@ const Calendar: React.FC = () => {
 }
 
 export default Calendar
-

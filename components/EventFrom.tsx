@@ -9,13 +9,21 @@ interface EventFormProps {
   onSave: (event: Event) => void
   onCancel: () => void
   event?: Event | null
+  existingEvents: Event[]
 }
 
-const EventForm: React.FC<EventFormProps> = ({ date, onSave, onCancel, event }) => {
+const EventForm: React.FC<EventFormProps> = ({ 
+  date, 
+  onSave, 
+  onCancel, 
+  event, 
+  existingEvents 
+}) => {
   const [name, setName] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (event) {
@@ -31,8 +39,46 @@ const EventForm: React.FC<EventFormProps> = ({ date, onSave, onCancel, event }) 
     }
   }, [event])
 
+  const isTimeOverlap = (newStartTime: string, newEndTime: string) => {
+    return existingEvents.some(existingEvent => {
+      // Skip comparison if we're editing the same event
+      if (event && existingEvent.id === event.id) return false;
+
+      // Convert times to minutes for easy comparison
+      const newStart = timeToMinutes(newStartTime)
+      const newEnd = timeToMinutes(newEndTime)
+      const existingStart = timeToMinutes(existingEvent.startTime)
+      const existingEnd = timeToMinutes(existingEvent.endTime)
+
+      // Check for overlap
+      return (
+        (newStart >= existingStart && newStart < existingEnd) ||
+        (newEnd > existingStart && newEnd <= existingEnd) ||
+        (newStart <= existingStart && newEnd >= existingEnd)
+      )
+    })
+  }
+
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate end time is after start time
+    if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+      setError('End time must be after start time')
+      return
+    }
+
+    // Check for time conflicts
+    if (isTimeOverlap(startTime, endTime)) {
+      setError('This time slot conflicts with an existing event')
+      return
+    }
+
     const newEvent: Event = {
       id: event?.id || Date.now().toString(),
       date: date.toISOString(),
@@ -41,11 +87,19 @@ const EventForm: React.FC<EventFormProps> = ({ date, onSave, onCancel, event }) 
       endTime,
       description
     }
+    
+    // Clear any previous errors
+    setError('')
     onSave(newEvent)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      {error && (
+        <div className="text-red-500 bg-red-100 p-2 rounded mb-4">
+          {error}
+        </div>
+      )}
       <Input
         type="text"
         placeholder="Event Name"
@@ -79,4 +133,3 @@ const EventForm: React.FC<EventFormProps> = ({ date, onSave, onCancel, event }) 
 }
 
 export default EventForm
-
